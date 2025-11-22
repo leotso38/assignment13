@@ -129,26 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
             last_name: form.last_name.value.trim()
         };
 
-        // Client-side validation
-        if (!formData.username || formData.username.length < 3) {
-            showError('Username must be at least 3 characters long');
-            return;
-        }
-
-        if (!isValidEmail(formData.email)) {
-            showError('Please enter a valid email address');
-            return;
-        }
-
-        if (!isValidPassword(formData.password)) {
-            showError('Password must be at least 8 characters long and contain uppercase, lowercase, and numbers');
-            return;
-        }
-
-        if (formData.password !== formData.confirm_password) {
-            showError('Passwords do not match');
-            return;
-        }
+        // ... (Keep your existing Client-side validation checks here) ...
 
         try {
             const response = await fetch('/auth/register', {
@@ -162,7 +143,25 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.detail || 'Registration failed');
+                // IMPROVED ERROR HANDLING
+                let errorText = 'Registration failed';
+                
+                // Check if 'detail' exists
+                if (data.detail) {
+                    if (typeof data.detail === 'string') {
+                        // Case 1: Simple string error
+                        errorText = data.detail;
+                    } else if (Array.isArray(data.detail)) {
+                        // Case 2: List of validation errors (FastAPI default)
+                        // Extracts the 'msg' field from each error object and joins them
+                        errorText = data.detail.map(err => err.msg).join(', ');
+                    } else if (typeof data.detail === 'object') {
+                        // Case 3: Single object error
+                        errorText = JSON.stringify(data.detail);
+                    }
+                }
+                
+                throw new Error(errorText);
             }
 
             // Show success message
@@ -176,6 +175,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             showError(error.message || 'An error occurred during registration');
         }
+   
     });
 
     // Real-time password match validation
